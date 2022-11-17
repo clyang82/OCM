@@ -100,18 +100,13 @@ func CreateServerChain(completedOptions CompletedServerRunOptions) (*aggregatora
 		return nil, err
 	}
 
-	kubeAPIServer, err := CreateKubeAPIServer(kubeAPIServerConfig, apiExtensionsServer.GenericAPIServer)
-	if err != nil {
-		return nil, err
-	}
-
 	// aggregator comes last in the chain
 	aggregatorConfig, err := createAggregatorConfig(*kubeAPIServerConfig.GenericConfig, completedOptions.ServerRunOptions, kubeAPIServerConfig.ExtraConfig.VersionedInformers, serviceResolver, kubeAPIServerConfig.ExtraConfig.ProxyTransport, pluginInitializer)
 	if err != nil {
 		return nil, err
 	}
 	aggregatorServer, err := createAggregatorServer(
-		aggregatorConfig, kubeAPIServer.GenericAPIServer, apiExtensionsServer.Informers,
+		aggregatorConfig, apiExtensionsServer.GenericAPIServer, apiExtensionsServer.Informers,
 		completedOptions.Authentication.ClientCert.ClientCA,
 		completedOptions.ClientKeyFile,
 	)
