@@ -9,7 +9,6 @@ import (
 	autoscalingapiv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	batchapiv1beta1 "k8s.io/api/batch/v1beta1"
 	certificatesapiv1 "k8s.io/api/certificates/v1"
-	coordinationapiv1 "k8s.io/api/coordination/v1"
 	apiv1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	discoveryv1beta1 "k8s.io/api/discovery/v1beta1"
@@ -19,7 +18,6 @@ import (
 	nodev1beta1 "k8s.io/api/node/v1beta1"
 	policyapiv1beta1 "k8s.io/api/policy/v1beta1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	storageapiv1 "k8s.io/api/storage/v1"
 	storageapiv1alpha1 "k8s.io/api/storage/v1alpha1"
 	storageapiv1beta1 "k8s.io/api/storage/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -35,21 +33,11 @@ var (
 		authenticationv1.SchemeGroupVersion,
 		authorizationapiv1.SchemeGroupVersion,
 		certificatesapiv1.SchemeGroupVersion,
-		coordinationapiv1.SchemeGroupVersion,
 		discoveryv1.SchemeGroupVersion,
 		eventsv1.SchemeGroupVersion,
 		rbacv1.SchemeGroupVersion,
-		storageapiv1.SchemeGroupVersion,
 	}
 
-	legacyBetaEnabledByDefaultResources = []schema.GroupVersionResource{
-		discoveryv1beta1.SchemeGroupVersion.WithResource("endpointslices"),                // remove in 1.25
-		eventsv1beta1.SchemeGroupVersion.WithResource("events"),                           // remove in 1.25
-		flowcontrolv1beta1.SchemeGroupVersion.WithResource("flowschemas"),                 // remove in 1.26
-		flowcontrolv1beta1.SchemeGroupVersion.WithResource("prioritylevelconfigurations"), // remove in 1.26
-		flowcontrolv1beta2.SchemeGroupVersion.WithResource("flowschemas"),                 // remove in 1.29
-		flowcontrolv1beta2.SchemeGroupVersion.WithResource("prioritylevelconfigurations"), // remove in 1.29
-	}
 	// betaAPIGroupVersionsDisabledByDefault is for all future beta groupVersions.
 	betaAPIGroupVersionsDisabledByDefault = []schema.GroupVersion{
 		autoscalingapiv2beta1.SchemeGroupVersion,
@@ -78,8 +66,6 @@ func APIResourceConfigSource() *serverstorage.ResourceConfig {
 	ret.EnableVersions(stableAPIGroupVersionsEnabledByDefault...)
 	ret.DisableVersions(betaAPIGroupVersionsDisabledByDefault...)
 	ret.DisableVersions(alphaAPIGroupVersionsDisabledByDefault...)
-
-	ret.EnableResources(legacyBetaEnabledByDefaultResources...)
 
 	return ret
 }
