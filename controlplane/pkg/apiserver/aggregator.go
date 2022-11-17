@@ -10,7 +10,6 @@ import (
 	"k8s.io/klog/v2"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	apiextensionsinformers "k8s.io/apiextensions-apiserver/pkg/client/informers/externalversions"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -22,9 +21,7 @@ import (
 	"k8s.io/apiserver/pkg/server/healthz"
 	genericoptions "k8s.io/apiserver/pkg/server/options"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
-	"k8s.io/client-go/dynamic"
 	kubeexternalinformers "k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	v1 "k8s.io/kube-aggregator/pkg/apis/apiregistration/v1"
@@ -38,10 +35,7 @@ import (
 	"k8s.io/kubernetes/pkg/controlplane/controller/crdregistration"
 	"open-cluster-management.io/ocm-controlplane/pkg/apiserver/options"
 
-	ocmcrds "open-cluster-management.io/ocm-controlplane/config/crds"
-	ocmcontrollerresources "open-cluster-management.io/ocm-controlplane/config/hub"
 	"open-cluster-management.io/ocm-controlplane/pkg/controllers/kubecontroller"
-	"open-cluster-management.io/ocm-controlplane/pkg/controllers/ocmcontroller"
 )
 
 func createAggregatorConfig(
@@ -164,102 +158,6 @@ func createAggregatorServer(aggregatorConfig *aggregatorapiserver.Config, delega
 		go func() {
 			kubecontroller.RunKubeControllers(controllerConfig, clientCert, clientKey)
 			klog.Infof("Finished bootstrapping kube controllers")
-		}()
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Setup apiextensions client
-	apiextensionsClient, err := apiextensionsclient.NewForConfig(aggregatorConfig.GenericConfig.LoopbackClientConfig)
-	if err != nil {
-		return nil, err
-	}
-	// Setup dynamic client
-	dynamicClient, err := dynamic.NewForConfig(aggregatorConfig.GenericConfig.LoopbackClientConfig)
-	if err != nil {
-		return nil, err
-	}
-	// Add PostStartHook to install ocm crds
-	err = aggregatorServer.GenericAPIServer.AddPostStartHook("ocm-controlplane-registration-crd", func(context genericapiserver.PostStartHookContext) error {
-		// bootstrap ocm crd
-		if err := ocmcrds.Bootstrap(
-			goContext(context),
-			apiextensionsClient,
-			apiextensionsClient.Discovery(),
-			dynamicClient,
-		); err != nil {
-			klog.Errorf("failed to bootstrap ocm CRDs: %v", err)
-			// nolint:nilerr
-			return nil // don't klog.Fatal. This only happens when context is cancelled.
-		}
-		klog.Infof("Finished bootstrapping ocm CRDs")
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Setup kubenetes client
-	kubeClient, err := kubernetes.NewForConfig(aggregatorConfig.GenericConfig.LoopbackClientConfig)
-	if err != nil {
-		return nil, err
-	}
-	// Add PostStartHook to install ocm hub resources
-	err = aggregatorServer.GenericAPIServer.AddPostStartHook("ocm-controlplane-registration-resource", func(context genericapiserver.PostStartHookContext) error {
-		// bootstrap ocm hub resources
-		if err := ocmcontrollerresources.Bootstrap(
-			goContext(context),
-			aggregatorConfig.GenericConfig.Config,
-			apiextensionsClient.Discovery(),
-			dynamicClient,
-			kubeClient,
-		); err != nil {
-			klog.Errorf("failed to bootstrap ocm hub controller resources: %v", err)
-			// nolint:nilerr
-			return nil // don't klog.Fatal. This only happens when context is cancelled.
-		}
-
-		klog.Infof("Finished bootstrapping ocm hub resources")
-
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Add PostStartHook to install registration controllers
-	err = aggregatorServer.GenericAPIServer.AddPostStartHook("ocm-controlplane-registration-controllers", func(context genericapiserver.PostStartHookContext) error {
-		// Start controllers
-		controllerConfig := rest.CopyConfig(aggregatorConfig.GenericConfig.LoopbackClientConfig)
-		controllerConfig.ContentType = "application/json"
-
-		go func() {
-			if err := ocmcontroller.InstallRegistraionControllers(goContext(context), controllerConfig); err != nil {
-				klog.Errorf("failed to bootstrap ocm registration controllers: %v", err)
-			} else {
-				klog.Infof("Finished bootstrapping ocm registration controllers")
-			}
-		}()
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	// Add PostStartHook to install placement controllers
-	err = aggregatorServer.GenericAPIServer.AddPostStartHook("ocm-controlplane-placement-controllers", func(context genericapiserver.PostStartHookContext) error {
-		// Start controllers
-		controllerConfig := rest.CopyConfig(aggregatorConfig.GenericConfig.LoopbackClientConfig)
-		controllerConfig.ContentType = "application/json"
-
-		go func() {
-			if err := ocmcontroller.InstallPlacementControllers(goContext(context), controllerConfig); err != nil {
-				klog.Errorf("failed to bootstrap ocm placement controllers: %v", err)
-			} else {
-				klog.Infof("Finished bootstrapping ocm placement controllers")
-			}
 		}()
 		return nil
 	})
