@@ -9,6 +9,7 @@ import (
 	autoscalingapiv2beta2 "k8s.io/api/autoscaling/v2beta2"
 	batchapiv1beta1 "k8s.io/api/batch/v1beta1"
 	certificatesapiv1 "k8s.io/api/certificates/v1"
+	coordinationapiv1 "k8s.io/api/coordination/v1"
 	apiv1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	discoveryv1beta1 "k8s.io/api/discovery/v1beta1"
@@ -33,6 +34,7 @@ var (
 		authenticationv1.SchemeGroupVersion,
 		authorizationapiv1.SchemeGroupVersion,
 		certificatesapiv1.SchemeGroupVersion,
+		coordinationapiv1.SchemeGroupVersion,
 		discoveryv1.SchemeGroupVersion,
 		eventsv1.SchemeGroupVersion,
 		rbacv1.SchemeGroupVersion,
