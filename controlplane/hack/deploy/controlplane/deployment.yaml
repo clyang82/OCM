@@ -18,6 +18,8 @@ spec:
       - name: etcd
         image: quay.io/clyang82/controlplane-etcd
         imagePullPolicy: Always
+        args:
+          - "/ocm-etcd"
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

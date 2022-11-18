@@ -434,7 +434,7 @@ type CompletedServerRunOptions struct {
 func (c *CompletedServerRunOptions) Run(ctx context.Context) error {
 	// set etcd to embeddedetcd info
 
-	c.ServerRunOptions.Etcd.StorageConfig.Transport.ServerList = []string{"https://127.0.0.1:2379"}
+	c.ServerRunOptions.Etcd.StorageConfig.Transport.ServerList = []string{"https://localhost:2379"}
 	c.ServerRunOptions.Etcd.StorageConfig.Transport.KeyFile = filepath.Join(".ocmconfig", "secrets", "peer", "key.pem")
 	c.ServerRunOptions.Etcd.StorageConfig.Transport.CertFile = filepath.Join(".ocmconfig", "secrets", "peer", "cert.pem")
 	c.ServerRunOptions.Etcd.StorageConfig.Transport.TrustedCAFile = filepath.Join(".ocmconfig", "secrets", "ca", "cert.pem")
