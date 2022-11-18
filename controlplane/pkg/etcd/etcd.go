@@ -26,7 +26,6 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"net/url"
@@ -100,21 +99,9 @@ func (s *Server) Run(ctx context.Context, peerPort, clientPort string, walSizeBy
 	if err != nil {
 		return err
 	}
-	// Shutdown when context is closed
-	go func() {
-		<-ctx.Done()
-		e.Close()
-	}()
-
-	select {
-	case <-e.Server.ReadyNotify():
-		return nil
-	case <-time.After(60 * time.Second):
-		e.Server.Stop() // trigger a shutdown
-		return fmt.Errorf("server took too long to start")
-	case e := <-e.Err():
-		return e
-	}
+	<-ctx.Done()
+	e.Close()
+	return nil
 }
 
 func generateClientAndServerCerts(hosts []string, dir string) error {

@@ -28,7 +28,6 @@ spec:
         volumeMounts:
         - mountPath: /.ocmconfig
           name: ocmconfig
-      containers:
       - name: controlplane
         image: quay.io/open-cluster-management/controlplane
         imagePullPolicy: Always
