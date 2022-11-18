@@ -15,6 +15,20 @@ spec:
         app: ocm-controlplane
     spec:
       containers:
+      - name: etcd
+        image: quay.io/clyang82/controlplane-etcd
+        imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          privileged: false
+          runAsNonRoot: true
+        volumeMounts:
+        - mountPath: /.ocmconfig
+          name: ocmconfig
+      containers:
       - name: controlplane
         image: quay.io/open-cluster-management/controlplane
         imagePullPolicy: Always

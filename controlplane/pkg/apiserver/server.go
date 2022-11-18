@@ -27,6 +27,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -74,7 +75,6 @@ import (
 	"k8s.io/kubernetes/pkg/serviceaccount"
 	ocmfeature "open-cluster-management.io/api/feature"
 	"open-cluster-management.io/ocm-controlplane/pkg/apiserver/options"
-	"open-cluster-management.io/ocm-controlplane/pkg/etcd"
 )
 
 func init() {
@@ -433,20 +433,11 @@ type CompletedServerRunOptions struct {
 
 func (c *CompletedServerRunOptions) Run(ctx context.Context) error {
 	// set etcd to embeddedetcd info
-	if c.EmbeddedEtcd != nil && c.EmbeddedEtcd.Enabled {
-		es := &etcd.Server{
-			Dir: c.EmbeddedEtcd.Directory,
-		}
-		embeddedClientInfo, err := es.Run(ctx, c.EmbeddedEtcd.PeerPort, c.EmbeddedEtcd.ClientPort, c.EmbeddedEtcd.WalSizeBytes)
-		if err != nil {
-			return err
-		}
 
-		c.ServerRunOptions.Etcd.StorageConfig.Transport.ServerList = embeddedClientInfo.Endpoints
-		c.ServerRunOptions.Etcd.StorageConfig.Transport.KeyFile = embeddedClientInfo.KeyFile
-		c.ServerRunOptions.Etcd.StorageConfig.Transport.CertFile = embeddedClientInfo.CertFile
-		c.ServerRunOptions.Etcd.StorageConfig.Transport.TrustedCAFile = embeddedClientInfo.TrustedCAFile
-	}
+	c.ServerRunOptions.Etcd.StorageConfig.Transport.ServerList = []string{"https://127.0.0.1:2379"}
+	c.ServerRunOptions.Etcd.StorageConfig.Transport.KeyFile = filepath.Join(".ocmconfig", "secrets", "peer", "key.pem")
+	c.ServerRunOptions.Etcd.StorageConfig.Transport.CertFile = filepath.Join(".ocmconfig", "secrets", "peer", "cert.pem")
+	c.ServerRunOptions.Etcd.StorageConfig.Transport.TrustedCAFile = filepath.Join(".ocmconfig", "secrets", "ca", "cert.pem")
 
 	// to generate self-signed certificates
 	if err := c.ServerRunOptions.SecureServing.MaybeDefaultWithSelfSignedCerts("localhost", nil, []net.IP{netutils.ParseIPSloppy("127.0.0.1")}); err != nil {

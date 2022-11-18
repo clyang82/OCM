@@ -54,7 +54,7 @@ type ClientInfo struct {
 	TrustedCAFile string
 }
 
-func (s *Server) Run(ctx context.Context, peerPort, clientPort string, walSizeBytes int64) (ClientInfo, error) {
+func (s *Server) Run(ctx context.Context, peerPort, clientPort string, walSizeBytes int64) error {
 	klog.Info("Creating embedded etcd server")
 	if walSizeBytes != 0 {
 		wal.SegmentSizeBytes = walSizeBytes
@@ -74,11 +74,11 @@ func (s *Server) Run(ctx context.Context, peerPort, clientPort string, walSizeBy
 	cfg.InitialCluster = cfg.InitialClusterFromName(cfg.Name)
 
 	if err := os.MkdirAll(cfg.Dir, 0700); err != nil {
-		return ClientInfo{}, err
+		return err
 	}
 
 	if err := generateClientAndServerCerts([]string{"localhost"}, filepath.Join(cfg.Dir, "secrets")); err != nil {
-		return ClientInfo{}, err
+		return err
 	}
 	cfg.PeerTLSInfo.ServerName = "localhost"
 	cfg.PeerTLSInfo.CertFile = filepath.Join(cfg.Dir, "secrets", "peer", "cert.pem")
@@ -98,7 +98,7 @@ func (s *Server) Run(ctx context.Context, peerPort, clientPort string, walSizeBy
 
 	e, err := embed.StartEtcd(cfg)
 	if err != nil {
-		return ClientInfo{}, err
+		return err
 	}
 	// Shutdown when context is closed
 	go func() {
@@ -106,25 +106,14 @@ func (s *Server) Run(ctx context.Context, peerPort, clientPort string, walSizeBy
 		e.Close()
 	}()
 
-	clientConfig, err := cfg.ClientTLSInfo.ClientConfig()
-	if err != nil {
-		return ClientInfo{}, err
-	}
-
 	select {
 	case <-e.Server.ReadyNotify():
-		return ClientInfo{
-			Endpoints:     []string{cfg.ACUrls[0].String()},
-			TLS:           clientConfig,
-			CertFile:      cfg.ClientTLSInfo.CertFile,
-			KeyFile:       cfg.ClientTLSInfo.KeyFile,
-			TrustedCAFile: cfg.ClientTLSInfo.TrustedCAFile,
-		}, nil
+		return nil
 	case <-time.After(60 * time.Second):
 		e.Server.Stop() // trigger a shutdown
-		return ClientInfo{}, fmt.Errorf("server took too long to start")
+		return fmt.Errorf("server took too long to start")
 	case e := <-e.Err():
-		return ClientInfo{}, e
+		return e
 	}
 }
 
