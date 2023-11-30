@@ -58,6 +58,7 @@ func NewKlusterletAgentCmd() *cobra.Command {
 	commonOptions.AddFlags(flags)
 	workOptions.AddFlags(flags)
 	registrationOption.AddFlags(flags)
+	//TODO: add features flags here
 
 	utilruntime.Must(features.SpokeMutableFeatureGate.Add(ocmfeature.DefaultSpokeRegistrationFeatureGates))
 	utilruntime.Must(features.SpokeMutableFeatureGate.Add(ocmfeature.DefaultSpokeWorkFeatureGates))

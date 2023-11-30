@@ -5,12 +5,14 @@ import (
 	"time"
 
 	"github.com/openshift/library-go/pkg/controller/controllercmd"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
-
 	commonoptions "open-cluster-management.io/ocm/pkg/common/options"
 	registration "open-cluster-management.io/ocm/pkg/registration/spoke"
 	work "open-cluster-management.io/ocm/pkg/work/spoke"
+	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 type AgentConfig struct {
@@ -49,6 +51,35 @@ func (a *AgentConfig) RunSpokeAgent(ctx context.Context, controllerContext *cont
 	// start work agent
 	go func() {
 		if err := workCfg.RunWorkloadAgent(ctx, controllerContext); err != nil {
+			klog.Fatal(err)
+		}
+	}()
+
+	scheme := runtime.NewScheme()
+	KlusterletFeatures, err := NewKlusterletFeatures(ctx, scheme, controllerContext, a.agentOption)
+	if err != nil {
+		klog.Fatal(err)
+	}
+
+	go func() {
+
+		hubConfig, err := clientcmd.BuildConfigFromFlags("", a.agentOption.HubKubeconfigFile)
+		if err != nil {
+			klog.Fatal(err)
+		}
+
+		mgr, err := ctrl.NewManager(hubConfig, ctrl.Options{
+			Scheme: scheme,
+		})
+
+		for _, feature := range KlusterletFeatures {
+			feature.Complete(ctx, mgr)
+		}
+
+		if err != nil {
+			klog.Fatal(err)
+		}
+		if err := mgr.Start(ctx); err != nil {
 			klog.Fatal(err)
 		}
 	}()

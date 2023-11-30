@@ -10,8 +10,13 @@ import (
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	rest "k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	scheme "open-cluster-management.io/api/client/operator/clientset/versioned/scheme"
 	v1 "open-cluster-management.io/api/operator/v1"
+	"github.com/spf13/pflag"
 )
 
 // KlusterletsGetter has a method to return a KlusterletInterface.
@@ -165,4 +170,85 @@ func (c *klusterlets) Patch(ctx context.Context, name string, pt types.PatchType
 		Do(ctx).
 		Into(result)
 	return
+}
+
+type KlusterletFeatureController interface {
+	// SetupWithManager sets up the controller with the Manager.
+	SetupWithManager(mgr ctrl.Manager) error
+	SetClient(c client.Client)
+	//SetRecorder(r record.EventRecorder)
+}
+
+type KlusterletFeatureRoutine interface {
+	Start(ctx context.Context)
+	SetClient(c client.Client)
+}
+
+type KlusterletFeature struct {
+
+	// the name of KlusterletFeature
+	Name string
+
+	reconcilers []reconcile.Reconciler
+
+	routines []KlusterletFeatureRoutine
+
+	fs *pflag.FlagSet
+
+	options ctrl.Options
+
+}
+
+
+// WithControllerManagerOptions sets the controller manager options.
+// problem: the manager is create yet. how to set the options?
+func (k *KlusterletFeature) WithControllerManagerOptions(options manager.Options) *KlusterletFeature {
+	//TODO
+	k.options = options
+	return k
+}
+
+func (k *KlusterletFeature) WithReconciler(r reconcile.Reconciler) *KlusterletFeature {
+	//TODO
+	if k.reconcilers == nil {
+		k.reconcilers = make([]reconcile.Reconciler, 0)
+	}
+	k.reconcilers = append(k.reconcilers, r)
+	return k
+}
+
+func (k *KlusterletFeature) WithRoutine(s KlusterletFeatureRoutine) *KlusterletFeature {
+	//TODO
+	if k.routines == nil {
+		k.routines = make([]KlusterletFeatureRoutine, 0)
+	}
+	k.routines = append(k.routines, s)
+	return k
+}
+
+func (k *KlusterletFeature) WithFlags(fs *pflag.FlagSet) *KlusterletFeature {
+	k.fs = fs
+	return k
+}
+
+func (k *KlusterletFeature) Complete(ctx context.Context, mgr ctrl.Manager) (*KlusterletFeature, error) {
+	//TODO
+	for _, r := range k.reconcilers {
+		controller := r.(KlusterletFeatureController)
+		controller.SetClient(mgr.GetClient())
+		//controller.SetRecorder(mgr.GetEventRecorderFor(k.Name))
+		if err := controller.SetupWithManager(mgr); err != nil {
+			return nil, err
+		}
+	}
+
+	for _, s := range k.routines {
+		s.SetClient(mgr.GetClient())
+		go s.Start(ctx)
+	}
+	return k, nil
+}
+
+func (k *KlusterletFeature) GetOptions() ctrl.Options {
+	return k.options
 }
